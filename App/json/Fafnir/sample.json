@@ -1,0 +1,65 @@
+{
+	"Actions": {
+		"Exception": {
+			"Command": "./crash.sh"
+		},
+		"Start": {
+			"Command": "demo",
+			"Envs": [
+				{
+					"Name": "LD_LIBRARY_PATH",
+					"Value": "${ENV_DHOP_RTM_ROOT}/lib/"
+				},
+				{
+					"Name": "EVN_1",
+					"Value": "Hello World"
+				},
+				{
+					"Name": "EVN_2",
+					"Value": "${ENV_DHOP_RTM_ROOT}/env"
+				}
+			],
+			"TimeoutMs": 3000
+		},
+		"Stop": {
+			"Command": "./stop.sh",
+			"TimeoutMs": 3000
+		}
+	},
+	"App": {
+		"Author": "DHOP",
+		"Name": "DhopSmpAI",
+		"Optional": {
+			"Alias": "DhopSmpAI",
+			"AutoRun": {
+				"PowerOn": false,
+				"Upgrade": false
+			},
+			"License": "Formal_DhopSmpAI.lic"
+		},
+		"Version": "0.1.0"
+	},
+	"BuildParams": {
+		"Optional": {
+			"Order": [
+				""
+			],
+			"PatchBasePkg": ""
+		},
+		"Platform": "Fafnir",
+		"PrivateKey": "private.pem",
+		"Workspace": "./app_root"
+	},
+	"Definition": [
+		{
+			"Name": "Sample1",
+			"Type": "Data",
+			"Value": "100"
+		},
+		{
+			"Name": "Sample2",
+			"Type": "File",
+			"Value": "dir/capability.json"
+		}
+	]
+}
