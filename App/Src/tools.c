@@ -3,30 +3,38 @@
 struct app_config        g_app_config;
 struct app_global_t      g_app_global;
 
-void* GetFunc(const char* FuncName){
-    static void* handle = NULL;
-    static int bRecord = 0;
-    if(handle==NULL){
-        handle = dlopen("./lib/libitop_sdk.so",RTLD_LAZY);
-    }
-    if(handle){
-        void* func = dlsym(handle,FuncName);
-        if(func){
-            if(!bRecord){
-                bRecord = 1;
-            }
+void *GetFunc(const char *funcName) {
+    static void *handle = NULL; 
+
+    if (handle == NULL) {
+        handle = dlopen("/libsoc/libitop_sdk.so", RTLD_LAZY);
+        if (!handle) {
+            fprintf(stderr, "Error: %s\n", dlerror());
+            return NULL;
         }
-        else{
-            if(!bRecord){
-                dlclose(handle);
-                handle = NULL;
-            }
-        }
-        return func;
     }
-    return NULL;
+
+    // 获取函数指针
+    void *funcPtr = dlsym(handle, funcName);
+    DHOP_LOG_INFO("succes get funcPtr %s\n",funcName);
+    if (!funcPtr) {
+        fprintf(stderr, "Error: %s\n", dlerror());
+        return NULL;
+    }
+    return funcPtr;
 }
 
+
+DH_Int32 setHOME(){
+    DH_Int32 ret = -1;
+    typedef int (*PTZ_setHome)(DH_Handle);
+    DHOP_LOG_INFO("ready to get PTZSetHomeFunc\n");
+    PTZ_setHome DHOP_PTZ_setHomeFunc = (PTZ_setHome)GetFunc("DHOP_PTZ_setHome");
+    ret = DHOP_PTZ_setHomeFunc(g_app_global.hPTZ);
+    if(DHOP_SUCCESS != ret){
+        DHOP_LOG_ERROR("DHOP_PTZ_setHomeFunc fail with %#x\n",ret);
+    }
+}
 
 DH_Int32 app_ptz_init(){
     typedef int (*PTZ_getPtzChnNum)();
@@ -34,11 +42,21 @@ DH_Int32 app_ptz_init(){
     typedef int (*PTZ_open)(DHOP_PTZ_OpenParam*,DH_Handle*);
     DHOP_PTZ_Caps caps;
     DH_Int32 ret = -1;
-    DHOP_PTZ_OpenParam pParm = {0,};
+    DHOP_PTZ_OpenParam pParm;
+    pParm.channel = 0;
     PTZ_getPtzChnNum DHOP_PTZ_getPtzChnNumFunc = (PTZ_getPtzChnNum)GetFunc("DHOP_PTZ_getPtzChnNum");
     PTZ_getChnCaps DHOP_PTZ_getChnCapsFunc = (PTZ_getChnCaps)GetFunc("DHOP_PTZ_getChnCaps");
     PTZ_open       DHOP_PTZ_openFunc = (PTZ_open)GetFunc("DHOP_PTZ_open");
+    DHOP_LOG_INFO("before Func\n");
+    int num = DHOP_PTZ_getPtzChnNumFunc();
+    if(num < 0){
+        DHOP_LOG_ERROR("DHOP_PTZ_getPtzChnNumFunc fail\n");
+    }
     ret = DHOP_PTZ_openFunc(&pParm,&(g_app_global.hPTZ));
+    if(DHOP_SUCCESS!=ret){
+        DHOP_LOG_ERROR("DHOP_PTZ_openFunc fail!\n");
+    }
+    DHOP_LOG_INFO("app_ptz_init succes\n");
     return ret;
 }
 
@@ -46,8 +64,11 @@ DH_Int32 app_ptz_deinit(){
     typedef int (*PTZ_close)(DH_Handle*);
     PTZ_close DHOP_PTZ_closeFunc = (PTZ_close)GetFunc("DHOP_PTZ_close");
     DH_Int32 ret = -1;
-
+    DHOP_LOG_INFO("before DHOP_PTZ_closeFunc\n");
     ret = DHOP_PTZ_closeFunc(&(g_app_global.hPTZ));
+    if(ret!=DHOP_SUCCESS){
+        DHOP_LOG_ERROR("DHOP_PTZ_closeFunc fail\n");
+    }
     return ret;
 }
 
@@ -557,13 +578,7 @@ DH_Int32 app_http_on_request(const DHOP_HTTP_Request  *request,
     }
     else if(0==strncmp(cmd,"/set_Home?",10)){
         DH_Int32 ret = -1;
-        typedef int (*PTZ_setHome)(DH_Handle);
-        PTZ_setHome DHOP_PTZ_setHomeFunc = (PTZ_setHome)GetFunc("DHOP_PTZ_setHome");
-        ret = DHOP_PTZ_setHomeFunc(g_app_global.hPTZ);
-        if(DHOP_SUCCESS != ret){
-            DHOP_LOG_ERROR("DHOP_PTZ_setHomeFunc fail with %#x\n",ret);
-        }
-
+        ret = setHOME();
         length += sprintf(buffer + length, "0],\"status\":\"OK\"}");
         response->addHeader(request->token, "Content-Type", "application/json");
         response->setCode(request->token, DHOP_HTTP_StatusCode_200_OK);

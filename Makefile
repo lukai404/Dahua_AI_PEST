@@ -3,13 +3,15 @@ CFLAGS += -I$(PWD)/../Include/DhopAI
 CFLAGS += -I$(PWD)/../Include/DhopSdk/Event
 CFLAGS += -I App/Src/$(plat)
 CFLAGS += -litop_ai
-CFLAGS += -litop_sdk
 
 all:clean
 	$(CROSS)g++ $(wildcard App/Src/*.c) $(wildcard App/Src/$(plat)/*.c)  $(CFLAGS) -o $(TARGET)
 
 	mkdir -p $(APPROOT)/model
 	@cp ./App/model/${plat}_nnie.nnx $(APPROOT)/model
+
+	#mkdir -p $(APPROOT)/model/test
+	#@cp /home/lukai/selected_test_data/images/test/*.jpg $(APPROOT)/model/test
 	
 	mkdir -p $(APPROOT)/lib
 	@cp $(PWD)/../Libs/*.so $(APPROOT)/lib

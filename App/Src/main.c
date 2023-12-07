@@ -19,6 +19,8 @@ DH_Int32 moveToHOME(){
     return ret;
 }
 
+
+
 DH_Int32 moveToPTZ(DHOP_PTZ_Space* pos){
     DH_Int32 ret = -1;
     typedef int (*PTZ_absoluteMoveFunc)(DH_Handle, DHOP_PTZ_Space*, DHOP_PTZ_Speed*);
@@ -128,7 +130,6 @@ void cruise_action(){
 }
 
 
-
 void Inference_benchmark(){
     char jpg_name[30];
     DHOP_AI_IMG_Handle image;
@@ -136,6 +137,9 @@ void Inference_benchmark(){
     int MAX_OUTPUT_NUM = 15;
     send_infos results;
     for(int step = 0; step < 400 ; step++){
+        if(!g_app_config.cruise_start){
+            
+        }
         sprintf(jpg_name,"./model/test_%d.jpg",step);
         // creat DHOP_AI_IMG_Handle. need use DHOP_AI_IMG_destroy() to release img mem
         DHOP_AI_IMG_Handle hImg;
@@ -186,8 +190,6 @@ void Inference_benchmark(){
             DHOP_LOG_ERROR("DHOP_AI_MAT_getActiveRange fail with %#x\n",ret);
         }
         
-
-        
         DHOP_AI_NNX_ResultYolo *yolo_result = (DHOP_AI_NNX_ResultYolo *)DHOP_AI_MAT_ptr2(yoloMat, NULL);
         memset(&results,0,sizeof(results));
         results.position = step;
@@ -221,8 +223,18 @@ void Inference_benchmark(){
         if(ret != DHOP_SUCCESS){
             DHOP_LOG_ERROR("DHOP_AI_IMGUTILS_destroy fail with %#x\n",ret);
         }
-
     }
+err0:
+    memset(&results,0,sizeof(results));
+    results.stop = 1;
+    ret = send(g_app_global.hNet,&results,sizeof(results),0);
+    if (ret < 0) {
+        perror("send head failed:");
+        app_net_reinit();
+        DHOP_LOG_ERROR("app_net_reinit fail\n");
+        return;
+    }  
+    return;
 }
 
 DH_Int32 app_ai_task()
@@ -322,7 +334,6 @@ int main(int argc, char **argv)
         DHOP_LOG_ERROR("app_ptz_init fail with %#x\n", ret);
         goto err6;
     }
-
 
     ret = app_ai_task();
     if (DHOP_SUCCESS != ret)
