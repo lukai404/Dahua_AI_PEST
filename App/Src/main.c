@@ -186,6 +186,8 @@ void Inference_benchmark(){
             DHOP_LOG_ERROR("DHOP_AI_MAT_getActiveRange fail with %#x\n",ret);
         }
         
+
+        
         DHOP_AI_NNX_ResultYolo *yolo_result = (DHOP_AI_NNX_ResultYolo *)DHOP_AI_MAT_ptr2(yoloMat, NULL);
         memset(&results,0,sizeof(results));
         results.position = step;

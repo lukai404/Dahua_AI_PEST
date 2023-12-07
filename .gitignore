@@ -3,3 +3,4 @@
 ./App/*.bin
 ./App/*.lic
 ./App/demo
+./App/web_demo
