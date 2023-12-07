@@ -5,7 +5,9 @@
             / (align) ) * (align) )
 #define FLOOR(value, align)   (( (value) / (align) ) * (align) )
 
-#define APP_MAX_AI_RESULT_NUM   (32)
+
+extern struct app_config        g_app_config;
+extern struct app_global_t      g_app_global;
 
 DH_Int32 Listnum_b5[33] = { 16,3,9,3,13,3,9,3,15,3,9,3,13,3,9,3,17,3,9,3,13,3,9,3,15,3,9,3,13,3,9,3,16 };
 
@@ -29,6 +31,7 @@ DH_Int32 moveToPTZ(DHOP_PTZ_Space* pos){
     ret = DHOP_PTZ_absoluteMoveFunc(g_app_global.hPTZ,pos,&speed);
     return ret;
 }
+
 
 DH_Int32 getPTZStatus(DHOP_PTZ_Status* positions){
     DH_Int32 ret = -1;
@@ -93,10 +96,10 @@ void cruise_action(){
     
     //for cruise
     for(int pos = 0;pos < POSITION_NUMBER; pos++){
-        //go to PTZ
         if(g_app_config.cruise_start==0){
             break;
         }
+        //go to PTZ
         ret = moveToPTZ(&(g_app_global.positions_infos[pos]));
         if(DHOP_SUCCESS!=ret){
             DHOP_LOG_ERROR("moveToPTZ fail with %#x\n",ret);
@@ -125,10 +128,106 @@ void cruise_action(){
 }
 
 
-DH_Int32 app_ai_task(){
+
+void Inference_benchmark(){
+    char jpg_name[30];
+    DHOP_AI_IMG_Handle image;
+    DH_Int32 ret = -1;
+    int MAX_OUTPUT_NUM = 15;
+    send_infos results;
+    for(int step = 0; step < 400 ; step++){
+        sprintf(jpg_name,"./model/test_%d.jpg",step);
+        // creat DHOP_AI_IMG_Handle. need use DHOP_AI_IMG_destroy() to release img mem
+        DHOP_AI_IMG_Handle hImg;
+        ret = DHOP_AI_IMGUTILS_createFromFile(&hImg, jpg_name , DHOP_AI_IMG_CS_YUV420SP_VU);
+        if(ret != DHOP_SUCCESS){
+            DHOP_LOG_ERROR("DHOP_AI_IMGUTILS_createFromFile fail with %#x\n",ret);
+        }
+
+        //get input blob name
+        DH_String inputNames[MAX_OUTPUT_NUM];
+        DH_Uint32 inputNum = MAX_OUTPUT_NUM;
+        ret = DHOP_AI_NNX_getInputBlobNames(g_app_global.hNNX, (DH_Byte**)&inputNames, &inputNum);
+        if(ret != DHOP_SUCCESS){
+            DHOP_LOG_ERROR("DHOP_AI_NNX_getInputBlobNames fail with %#x\n",ret);
+        }
+        
+        // set input image
+        ret = DHOP_AI_NNX_setInputImg(g_app_global.hNNX , (const DH_String)inputNames[0], &hImg, 1);
+        if(ret != DHOP_SUCCESS){
+            DHOP_LOG_ERROR("DHOP_AI_NNX_setInputImg fail with %#x\n",ret);
+        }
+
+        // run engine
+        ret = DHOP_AI_NNX_run(g_app_global.hNNX);
+        if(ret != DHOP_SUCCESS){
+            DHOP_LOG_ERROR("DHOP_AI_NNX_run fail with %#x\n",ret);
+        }
+
+        //get output blob name
+        DH_String outputNames[MAX_OUTPUT_NUM];
+        DH_Uint32 outputNum = MAX_OUTPUT_NUM;
+        ret = DHOP_AI_NNX_getOutputBlobNames(g_app_global.hNNX, (DH_Byte**)&outputNames, &outputNum);
+        if(ret != DHOP_SUCCESS){
+            DHOP_LOG_ERROR("DHOP_AI_NNX_getOutputBlobNames fail with %#x\n",ret);
+        }
+        
+        // get result
+        DH_Uint32 type = DHOP_AI_NNX_RESULT_TYPE_MAX; 
+        DHOP_AI_MAT_Handle yoloMat;
+        ret = DHOP_AI_NNX_getResult(g_app_global.hNNX , (const DH_String)outputNames[0], &type, &yoloMat);
+        if(ret != DHOP_SUCCESS){
+            DHOP_LOG_ERROR("DHOP_AI_NNX_getResult fail with %#x\n",ret);
+        }
+
+        DH_Int32 h,start;
+        ret = DHOP_AI_MAT_getActiveRange(yoloMat, 0, &start, &h); 
+        if(ret != DHOP_SUCCESS){
+            DHOP_LOG_ERROR("DHOP_AI_MAT_getActiveRange fail with %#x\n",ret);
+        }
+        
+        DHOP_AI_NNX_ResultYolo *yolo_result = (DHOP_AI_NNX_ResultYolo *)DHOP_AI_MAT_ptr2(yoloMat, NULL);
+        memset(&results,0,sizeof(results));
+        results.position = step;
+        int k = 0;
+        for(int i = start; i < start+h; i++ )
+        {
+            if (k < APP_MAX_AI_RESULT_NUM) {
+                // 算法输出的是0~1的浮点数据，要转换成YUV frame的宽高坐标
+                results.bboxes[k].actual.lt.x = app_size_limit((yolo_result[i].x - yolo_result[i].w/2) * 512 ,512);
+                results.bboxes[k].actual.lt.y = app_size_limit((yolo_result[i].y - yolo_result[i].h/2) * 512, 512);
+                results.bboxes[k].actual.rb.x = app_size_limit((yolo_result[i].x + yolo_result[i].w/2) * 512, 512);
+                results.bboxes[k].actual.rb.y  = app_size_limit((yolo_result[i].y + yolo_result[i].h/2) * 512, 512);
+                k++;
+            }
+            else {
+                break;
+            }
+        }
+            
+        if (g_app_global.hNet > 0) {
+            ret = send(g_app_global.hNet, &results, sizeof(results), 0);
+            if (ret < 0) {
+                perror("send head failed:");
+                app_net_reinit();
+                DHOP_LOG_ERROR("app_net_reinit fail\n");
+                return;
+            }
+        }   
+        // destroy DHOP_AI_IMG_Handle
+        ret = DHOP_AI_IMGUTILS_destroy(hImg);
+        if(ret != DHOP_SUCCESS){
+            DHOP_LOG_ERROR("DHOP_AI_IMGUTILS_destroy fail with %#x\n",ret);
+        }
+
+    }
+}
+
+DH_Int32 app_ai_task()
+{
     while(1){
         if(g_app_config.cruise_start){
-            cruise_action();            
+            Inference_benchmark();            
         }
         sleep(1);
     }
@@ -172,6 +271,7 @@ int main(int argc, char **argv)
 
     object_ot_init();
 
+    DHOP_LOG_INFO("enter app_ai_init\n");
     ret = app_ai_init();
     if (DHOP_SUCCESS != ret)
     {
@@ -252,5 +352,6 @@ err1:
     DHOP_SYS_deInit();
 
     return -1;
+
 }
 

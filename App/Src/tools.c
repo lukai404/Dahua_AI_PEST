@@ -1,5 +1,8 @@
 #include "tools.h"
 
+struct app_config        g_app_config;
+struct app_global_t      g_app_global;
+
 void* GetFunc(const char* FuncName){
     static void* handle = NULL;
     static int bRecord = 0;
@@ -330,7 +333,7 @@ int app_ai_deinit() {
 // AI的运行
 DH_Int32 app_ai_process(DHOP_AI_NNX_Handle hNNX, DHOP_YUV_FrameData2 * frame, send_infos* results)
 {
-    DH_Int32                ret = -1, i, k;
+    DH_Int32                ret = -1, i,k;
     DH_Ptr                  ptrs[2];
     DH_Ptr                  ptrs_HW[2];
     DH_Int32                strides[2];
@@ -410,7 +413,7 @@ DH_Int32 app_ai_process(DHOP_AI_NNX_Handle hNNX, DHOP_YUV_FrameData2 * frame, se
         goto err1;
     }
 
-    int k = 0;
+    k = 0;
 
     for (i = start; i < start+h; i++)
     {
@@ -588,8 +591,10 @@ DH_Void app_exit_callback()
 
     object_ot_deinit();
 
+    app_ptz_deinit();
+
     DHOP_SYS_deInit();
 
-    app_ptz_deinit();
+    
 }
 

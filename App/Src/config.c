@@ -37,7 +37,7 @@ _err1:
         config->min_region.rb_x = 100;
         config->min_region.rb_y = 100;
 
-        strcpy(config->net_ip, "10.34.7.29");
+        strcpy(config->net_ip, "192.168.1.109");
         config->net_port = 3000;
 
         config->log_level = 3;

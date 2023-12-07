@@ -70,8 +70,8 @@ struct paint_info_t {
     DH_Char                     szText[24];
 };
 
-struct app_config        g_app_config;
-struct app_global_t      g_app_global;
+extern struct app_config        g_app_config;
+extern struct app_global_t      g_app_global;
 
 
 extern int app_net_init();
@@ -94,5 +94,6 @@ extern void app_exit_callback();
 extern void* GetFunc(const char* FuncName);
 extern int app_ai_process(DHOP_AI_NNX_Handle hNNX, DHOP_YUV_FrameData2 * frame, send_infos* results);
 extern int app_result_snap(send_infos* result, DHOP_YUV_FrameData2* frame);
+extern int app_size_limit(DH_Int32 pix, DH_Int32 max);
 
 #endif
