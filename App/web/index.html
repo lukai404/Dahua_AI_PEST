@@ -554,6 +554,7 @@
             //点击“开始巡航”按钮，开启巡航
             $("#start_cruise").click(function(){
                 var req_url = window.location.origin + "/DHOP_API/"+ getAppName()+"/startCruise"+"?t=3&session="+getSession();
+                alert(req_url);
                 if (g_timer1 != null) {
                     clearInterval(g_timer1);
                     g_timer1 = null;

@@ -13,8 +13,9 @@ enum {
 typedef struct {
     DH_Int32        id;
     DH_Int32        state;
-    DH_Rect16       rect;
+    DH_Rect16       rect;  //8 bytes
     DH_Rect16       actual;
+    float           conf;
     DH_Int32        classId;
 } obj_info_t;
 

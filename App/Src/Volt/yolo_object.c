@@ -8,7 +8,7 @@ const char *g_yolo_object_list[4] =
     "motorcycle"
 };
 
-char g_modelfile[] = "./model/Volt_nnie.nnx";
+char g_modelfile[] = "./model/pest_yolov5_3516cv500_nnie.nnx";
 
 void fillBuffer(char* buffer, int* len)
 {

@@ -20,7 +20,6 @@ DH_Int32 moveToHOME(){
 }
 
 
-
 DH_Int32 moveToPTZ(DHOP_PTZ_Space* pos){
     DH_Int32 ret = -1;
     typedef int (*PTZ_absoluteMoveFunc)(DH_Handle, DHOP_PTZ_Space*, DHOP_PTZ_Speed*);
@@ -138,9 +137,9 @@ void Inference_benchmark(){
     send_infos results;
     for(int step = 0; step < 400 ; step++){
         if(!g_app_config.cruise_start){
-            
+            goto err0;
         }
-        sprintf(jpg_name,"./model/test_%d.jpg",step);
+        sprintf(jpg_name,"./model/test/test_%d.jpg",step);
         // creat DHOP_AI_IMG_Handle. need use DHOP_AI_IMG_destroy() to release img mem
         DHOP_AI_IMG_Handle hImg;
         ret = DHOP_AI_IMGUTILS_createFromFile(&hImg, jpg_name , DHOP_AI_IMG_CS_YUV420SP_VU);
@@ -202,15 +201,21 @@ void Inference_benchmark(){
                 results.bboxes[k].actual.lt.y = app_size_limit((yolo_result[i].y - yolo_result[i].h/2) * 512, 512);
                 results.bboxes[k].actual.rb.x = app_size_limit((yolo_result[i].x + yolo_result[i].w/2) * 512, 512);
                 results.bboxes[k].actual.rb.y  = app_size_limit((yolo_result[i].y + yolo_result[i].h/2) * 512, 512);
+                results.bboxes[k].conf = yolo_result[i].prob;
+                results.bboxes[k].classId = yolo_result[i].classIdx;
                 k++;
             }
             else {
                 break;
             }
         }
-            
+        results.pest_num = k;
         if (g_app_global.hNet > 0) {
             ret = send(g_app_global.hNet, &results, sizeof(results), 0);
+            DHOP_LOG_INFO("id:%d\n",step);
+            DHOP_LOG_INFO("pest_num is %d\n",results.pest_num);
+            DHOP_LOG_INFO("sendinfos size:%d\n",sizeof(results));
+            DHOP_LOG_INFO("sendinfos.bboxes size:%d\n",sizeof(results.bboxes));
             if (ret < 0) {
                 perror("send head failed:");
                 app_net_reinit();
@@ -228,6 +233,7 @@ err0:
     memset(&results,0,sizeof(results));
     results.stop = 1;
     ret = send(g_app_global.hNet,&results,sizeof(results),0);
+    g_app_config.cruise_start = 0;
     if (ret < 0) {
         perror("send head failed:");
         app_net_reinit();
@@ -339,7 +345,7 @@ int main(int argc, char **argv)
     if (DHOP_SUCCESS != ret)
     {
         DHOP_LOG_ERROR("app_ai_task fail with %#x\n", ret);
-        goto err6;
+        goto err7;
     }
     else
     {

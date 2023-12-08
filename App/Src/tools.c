@@ -13,11 +13,12 @@ void *GetFunc(const char *funcName) {
             return NULL;
         }
     }
-
     // 获取函数指针
+    DHOP_LOG_INFO("before dlsym\n");
     void *funcPtr = dlsym(handle, funcName);
-    DHOP_LOG_INFO("succes get funcPtr %s\n",funcName);
+    DHOP_LOG_INFO("after dlsym\n");
     if (!funcPtr) {
+        DHOP_LOG_ERROR("fail to get funcPtr %s\n",funcName);
         fprintf(stderr, "Error: %s\n", dlerror());
         return NULL;
     }
@@ -27,13 +28,12 @@ void *GetFunc(const char *funcName) {
 
 DH_Int32 setHOME(){
     DH_Int32 ret = -1;
-    typedef int (*PTZ_setHome)(DH_Handle);
-    DHOP_LOG_INFO("ready to get PTZSetHomeFunc\n");
-    PTZ_setHome DHOP_PTZ_setHomeFunc = (PTZ_setHome)GetFunc("DHOP_PTZ_setHome");
-    ret = DHOP_PTZ_setHomeFunc(g_app_global.hPTZ);
-    if(DHOP_SUCCESS != ret){
-        DHOP_LOG_ERROR("DHOP_PTZ_setHomeFunc fail with %#x\n",ret);
-    }
+    DH_Int32 (*DHOP_PTZ_setHome)(DH_Handle phPtz);
+    DHOP_PTZ_setHome = (DH_Int32 (*)(DH_Handle))GetFunc("DHOP_PTZ_setHome");
+    DHOP_LOG_INFO("before DHOP_PTZ_setHome\n");
+    ret = DHOP_PTZ_setHome(g_app_global.hPTZ);
+    DHOP_LOG_INFO("after DHOP_PTZ_setHome\n");
+    return ret;
 }
 
 DH_Int32 app_ptz_init(){
@@ -307,7 +307,6 @@ DH_Int32 app_result_snap(send_infos* result, DHOP_YUV_FrameData2* frame) {
 }
 
 int app_ai_init() {
-
     DH_Int32                ret = -1;
     DHOP_AI_NNX_Version     ver;
     char modelkeystr[] = "gGQaZICol8tv2BqcbQ0UZG9kXmRvZBnsPWQDZMRkkmSg/G8xkNtvZG5k5a1vZG/81a00yXIgcMpvDpFkOmRMYg==";
@@ -338,7 +337,6 @@ int app_ai_init() {
         DHOP_LOG_ERROR("dhop ai nnx create fail#x\n", ret);
         return DHOP_FAILED;
     }
-
     return 0;
 }
 
@@ -535,7 +533,6 @@ DH_Int32 app_http_on_request(const DHOP_HTTP_Request  *request,
 
     if (0 == strncmp(cmd, "/setConfig?", 11)) {
         memset(buffer, 0, len);
-
         len /= 2;
         outbuf = buffer + len;
 
@@ -557,9 +554,11 @@ DH_Int32 app_http_on_request(const DHOP_HTTP_Request  *request,
         response->writeEnd(request->token);
     }
     else if(0==strncmp(cmd,"/startCruise?",13)){
+        
         g_app_config.cruise_start = 1;
 
-        length += sprintf(buffer + length, "0],\"status\":\"OK\"}");
+        length = sprintf(buffer, "{\"status\":\"OK\"}");
+
         response->addHeader(request->token, "Content-Type", "application/json");
         response->setCode(request->token, DHOP_HTTP_StatusCode_200_OK);
         response->setContentLength(request->token, length);
@@ -569,7 +568,8 @@ DH_Int32 app_http_on_request(const DHOP_HTTP_Request  *request,
     else if(0==strncmp(cmd,"/stopCruise?",12)){
         g_app_config.cruise_start = 0;
         
-        length += sprintf(buffer + length, "0],\"status\":\"OK\"}");
+        length = sprintf(buffer, "{\"status\":\"OK\"}");
+
         response->addHeader(request->token, "Content-Type", "application/json");
         response->setCode(request->token, DHOP_HTTP_StatusCode_200_OK);
         response->setContentLength(request->token, length);
@@ -578,13 +578,16 @@ DH_Int32 app_http_on_request(const DHOP_HTTP_Request  *request,
     }
     else if(0==strncmp(cmd,"/set_Home?",10)){
         DH_Int32 ret = -1;
+        DHOP_LOG_INFO("click setHome\n");
         ret = setHOME();
-        length += sprintf(buffer + length, "0],\"status\":\"OK\"}");
+        length = sprintf(buffer, "{\"status\":\"OK\"}");
+
         response->addHeader(request->token, "Content-Type", "application/json");
         response->setCode(request->token, DHOP_HTTP_StatusCode_200_OK);
         response->setContentLength(request->token, length);
         response->writeContent(request->token, buffer, length);
         response->writeEnd(request->token);
+        DHOP_LOG_INFO("after response\n");
     }
     return DHOP_SUCCESS;
 }

@@ -73,7 +73,6 @@ struct paint_info_t {
 extern struct app_config        g_app_config;
 extern struct app_global_t      g_app_global;
 
-
 extern int app_net_init();
 extern int app_net_deinit();
 extern int app_net_reinit();
@@ -86,7 +85,6 @@ extern int app_ptz_deinit();
 extern int app_ai_init();
 extern int app_ai_deinit();
 
-
 extern int app_http_urldecode(const char* src, char* outbuf, int size);
 extern int app_http_on_request(const DHOP_HTTP_Request  *request,
                              const DHOP_HTTP_Response *response);
@@ -95,5 +93,5 @@ extern void* GetFunc(const char* FuncName);
 extern int app_ai_process(DHOP_AI_NNX_Handle hNNX, DHOP_YUV_FrameData2 * frame, send_infos* results);
 extern int app_result_snap(send_infos* result, DHOP_YUV_FrameData2* frame);
 extern int app_size_limit(DH_Int32 pix, DH_Int32 max);
-
+extern int setHOME();
 #endif
