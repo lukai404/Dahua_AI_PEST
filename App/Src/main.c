@@ -114,6 +114,9 @@ void cruise_action(){
             DHOP_LOG_ERROR("DHOP_YUV_getFrame2 fail with %#x\n",ret);
         }
 
+
+
+
         send_infos results;
         results.position = pos;
         ret = app_ai_process(g_app_global.hNNX,&yuvFrame,&results);
