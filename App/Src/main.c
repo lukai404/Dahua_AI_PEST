@@ -129,16 +129,13 @@ void cruise_action(){
 }
 
 
-
 void Inference_benchmark(){
     char jpg_name[30];
     DHOP_AI_IMG_Handle image;
     DH_Int32 ret = -1;
     int MAX_OUTPUT_NUM = 15;
     send_infos results;
-
-    
-    for(int step = 0; step < 400 ; step++){
+    for(int step = 0; step < 30 ; step++){
         if(!g_app_config.cruise_start){
             goto err0;
         }
