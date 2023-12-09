@@ -1,6 +1,6 @@
-./App/model/*
-./App/ResultShow
-./App/*.bin
-./App/*.lic
-./App/demo
-./App/web_demo
+App/model/*
+App/ResultShow
+App/*.bin
+App/*.lic
+App/demo
+App/web_demo
