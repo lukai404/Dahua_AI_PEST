@@ -14,9 +14,7 @@ void *GetFunc(const char *funcName) {
         }
     }
     // 获取函数指针
-    DHOP_LOG_INFO("before dlsym\n");
     void *funcPtr = dlsym(handle, funcName);
-    DHOP_LOG_INFO("after dlsym\n");
     if (!funcPtr) {
         DHOP_LOG_ERROR("fail to get funcPtr %s\n",funcName);
         fprintf(stderr, "Error: %s\n", dlerror());
@@ -238,7 +236,24 @@ DH_Int32 app_yuv_deinit()
     return DHOP_SUCCESS;
 }
 
+static DH_Uint32 DHOP_SMP_YUV_getDataSize(DH_Uint16 stride, DH_Uint16 height, DH_Uint16 format)
+{
+    DH_Uint32 dataSize = 0;
 
+    switch(format)
+    {
+        case DHOP_YUV_FMT_ONLY_Y:
+             dataSize = stride * height;
+        case DHOP_YUV_FMT_420P_I420:
+        case DHOP_YUV_FMT_420P_YV12:
+        case DHOP_YUV_FMT_420SP_UV:
+        case DHOP_YUV_FMT_420SP_VU:
+             dataSize = stride * height * 3 >> 1;
+        default:
+             break;
+    }
+    return dataSize;
+}
 
 // 将检测的结果发送给服务器端
 int app_result_send(DHOP_VENC_Result* image, send_infos* result) {
@@ -349,18 +364,109 @@ int app_ai_deinit() {
     return 0;
 }
 
+/**
+ * 将2560*1440的YUV帧，切割成18张512*512的子帧
+ * **/
+DH_Int32 split_frame(DHOP_YUV_FrameData2* yuvFrame, DHOP_YUV_FrameData2** subFrames)
+{
+    DH_Int32 ret = -1;
+    DHOP_YUV_CopyReq2 copyReq;
+    DH_Uint32 dataSize = 0;
+    DH_Uint8 *pPhyAddr, *pVirAddr = NULL;
+    for(int k = 0; k < SUB_FRAME_NUM; k++){
+        memset(&copyReq,0,sizeof(copyReq));
+        copyReq.cbSize = sizeof(copyReq);
+        memcpy(&copyReq.source,&(yuvFrame->data),sizeof(DHOP_YUV_PixelData));
+        
+        int row = k / 6;
+        int col = k % 6;
+
+        copyReq.region.lt.x = col==5 ? 2048 : col * 492;
+        copyReq.region.lt.y = row==2 ? 928 : row * 492;
+        copyReq.region.rb.x = copyReq.region.lt.x + 512;
+        copyReq.region.rb.y = copyReq.region.lt.y + 512;
+
+        copyReq.position.x = 0;
+        copyReq.position.y = 0;
+
+        copyReq.dest.format = yuvFrame->data.format;
+        copyReq.dest.width = 512;
+        copyReq.dest.height = 512;
+        
+        copyReq.dest.stride[0] = ALIGN(copyReq.dest.width, 16);
+        copyReq.dest.stride[1] = copyReq.dest.stride[0];
+        copyReq.dest.stride[2] = copyReq.dest.stride[1];
+
+        dataSize = DHOP_SMP_YUV_getDataSize(copyReq.dest.stride[0], copyReq.dest.height, copyReq.dest.format);
+        DHOP_LOG_INFO("DHOP_SMP_YUV_getDataSize success\n");
+        pPhyAddr = NULL;
+        pVirAddr = NULL;
+        ret = DHOP_MEM_blockAlloc(dataSize, 16, DH_FALSE, (DH_Void **)&pPhyAddr, (DH_Void **)&pVirAddr);
+        if(DHOP_SUCCESS != ret)
+        {
+            DHOP_LOG_ERROR("DHOP_MEM_blockAlloc fail with %#x\n", ret);
+            return ret;
+        }
+        DHOP_LOG_INFO("DHOP_MEM_blockAlloc success\n");
+
+        copyReq.dest.phyAddr.nv21.y = pPhyAddr;
+        copyReq.dest.phyAddr.nv21.vu = pPhyAddr + copyReq.dest.stride[0] * copyReq.dest.height;
+        copyReq.dest.virAddr.nv21.y = pVirAddr;
+        copyReq.dest.virAddr.nv21.vu = pVirAddr + copyReq.dest.stride[0] * copyReq.dest.height;
+
+        ret = DHOP_YUV_copy2(g_app_global.hYuv,&copyReq);
+        if(DHOP_SUCCESS != ret){
+            DHOP_LOG_ERROR("DHOP_YUV_copy2 fail with %#x\n", ret);
+            return ret;
+        }
+        DHOP_LOG_INFO("DHOP_YUV_copy2  success\n");
+
+        memset(subFrames[k],0,sizeof(DHOP_YUV_FrameData2));
+        subFrames[k]->cbSize = sizeof(DHOP_YUV_FrameData2);
+        subFrames[k]->yuvStamp = yuvFrame->yuvStamp;
+        memcpy(&subFrames[k]->data,&copyReq.dest,sizeof(DHOP_YUV_PixelData));
+        DHOP_LOG_INFO("subFrame %d copy done!\n",k);
+
+        ret = DHOP_MEM_blockFree(pPhyAddr, pVirAddr);
+        if(DHOP_SUCCESS != ret)
+        {
+            DHOP_LOG_ERROR("DHOP_MEM_blockFree fail with %#x\n", ret);
+            return ret;
+        }
+        }
+    return 0;
+}
+
+//实现subFrame到global的坐标转换
+void convert_coordinates(obj_info_t* bboxes,int batchIdx){
+    int row = batchIdx / 6;
+    int col = batchIdx % 6;
+    int start_x = col==5 ? 2048 : col * 492;
+    int start_y = row==2 ? 928  : row * 492;
+    bboxes->actual.lt.x = start_x + bboxes->actual.lt.x;
+    bboxes->actual.lt.y = start_y + bboxes->actual.lt.y;
+    bboxes->actual.rb.x = start_x + bboxes->actual.rb.x;
+    bboxes->actual.rb.y = start_y + bboxes->actual.rb.y;
+    DHOP_LOG_INFO("the %d batchIdx done!\n",batchIdx);
+}
+
 // AI的运行
 DH_Int32 app_ai_process(DHOP_AI_NNX_Handle hNNX, DHOP_YUV_FrameData2 * frame, send_infos* results)
 {
-    DH_Int32                ret = -1, i,k;
+    DH_Int32                ret = -1, i,k,x;
     DH_Ptr                  ptrs[2];
     DH_Ptr                  ptrs_HW[2];
     DH_Int32                strides[2];
-    DHOP_AI_IMG_Handle      hImg;
+    DHOP_AI_IMG_Handle      hImg[18];
+    DHOP_YUV_FrameData2*    subFrame[18];     
     DH_Uint32               type = DHOP_AI_NNX_RESULT_TYPE_MAX;
     DHOP_AI_MAT_Handle      yoloMat;
     DH_Int32                h,start;
     DHOP_AI_NNX_ResultYolo *yolo_result;
+    DH_String               inputNames[MAX_OUTPUT_NUM];
+    DH_Uint32               inputNum = MAX_OUTPUT_NUM;
+    DH_String               outputNames[MAX_OUTPUT_NUM];
+    DH_Uint32               outputNum = MAX_OUTPUT_NUM;
 
     g_app_global.resultNum = 0;
 
@@ -372,25 +478,43 @@ DH_Int32 app_ai_process(DHOP_AI_NNX_Handle hNNX, DHOP_YUV_FrameData2 * frame, se
     strides[1]  = frame->data.width;
 
     //split 的逻辑
+    ret = split_frame(frame,subFrame);
 
-    // 创建DHOP_AI_IMG_Handle的句柄，需要DHOP_AI_IMG_destroy()来释放img的内存
-    ret = DHOP_AI_IMG_create(&hImg,
-                             frame->data.width,
-                             frame->data.height,
-                             DHOP_AI_IMG_CS_YUV420SP_VU,
-                             DHOP_AI_IMG_8U,
-                             ptrs,
-                             ptrs_HW,
-                             strides,
-                             2);
-    if (DHOP_SUCCESS != ret)
-    {
-        DHOP_LOG_ERROR("creat DHOP_AI_IMG_Handle fail\n");
-        goto err0;
+   // 创建DHOP_AI_IMG_Handle的句柄，需要DHOP_AI_IMG_destroy()来释放img的内存
+    for(x=0;x<18;x++){
+        ptrs[0]    = subFrame[x]->data.virAddr.nv21.y;
+        ptrs[1]    = subFrame[x]->data.virAddr.nv21.vu;
+        ptrs_HW[0] = subFrame[x]->data.phyAddr.nv21.y;
+        ptrs_HW[0] = subFrame[x]->data.phyAddr.nv21.vu;
+        strides[0] = subFrame[x]->data.stride[0];
+        strides[1] = subFrame[x]->data.width;
+        DHOP_LOG_INFO("strides[0]: %d,strides[1]: %d\n",strides[0],strides[1]);
+        ret = DHOP_AI_IMG_create(&(hImg[x]),
+                                 512,
+                                 512,
+                                 DHOP_AI_IMG_CS_YUV420SP_VU,
+                                 DHOP_AI_IMG_8U,
+                                 ptrs,
+                                 ptrs_HW,
+                                 strides,
+                                 2);
+
+        if (DHOP_SUCCESS != ret)
+        {
+            DHOP_LOG_ERROR("creat DHOP_AI_IMG_Handle fail\n");
+            goto err0;
+        }
     }
 
+    //获取输入blob名称
+    ret = DHOP_AI_NNX_getInputBlobNames(g_app_global.hNNX, (DH_Byte**)&inputNames, &inputNum);
+    if(ret != DHOP_SUCCESS){
+        DHOP_LOG_ERROR("DHOP_AI_NNX_getInputBlobNames fail with %#x\n",ret);
+    }
+        
+
     // 设置图片输入
-    ret = DHOP_AI_NNX_setInputImg(hNNX, (const DH_String)"image", &hImg, 1);
+    ret = DHOP_AI_NNX_setInputImg(g_app_global.hNNX, (const DH_String)inputNames[0], hImg, 18);
     if (DHOP_SUCCESS != ret)
     {
         DHOP_LOG_ERROR("dhop ai set input img fail");
@@ -398,16 +522,23 @@ DH_Int32 app_ai_process(DHOP_AI_NNX_Handle hNNX, DHOP_YUV_FrameData2 * frame, se
     }
 
     // AI运行
-    ret = DHOP_AI_NNX_run(hNNX);
+    ret = DHOP_AI_NNX_run(g_app_global.hNNX);
     if (DHOP_SUCCESS != ret)
     {
         DHOP_LOG_ERROR("dhop ai run fail");
         goto err1;
     }
 
+    //get output blob name
+
+    ret = DHOP_AI_NNX_getOutputBlobNames(g_app_global.hNNX, (DH_Byte**)&outputNames, &outputNum);
+    if(ret != DHOP_SUCCESS){
+        DHOP_LOG_ERROR("DHOP_AI_NNX_getOutputBlobNames fail with %#x\n",ret);
+    }
+
     // 获取AI检测结果
     type = DHOP_AI_NNX_RESULT_TYPE_MAX;
-    ret = DHOP_AI_NNX_getResult(hNNX, (const DH_String)"result", &type, &yoloMat);
+    ret = DHOP_AI_NNX_getResult(g_app_global.hNNX, (const DH_String)outputNames[0], &type, &yoloMat);
     if (DHOP_SUCCESS != ret)
     {
         DHOP_LOG_ERROR("dhop ai get result fail");
@@ -445,6 +576,9 @@ DH_Int32 app_ai_process(DHOP_AI_NNX_Handle hNNX, DHOP_YUV_FrameData2 * frame, se
                 results->bboxes[k].actual.lt.y = app_size_limit((yolo_result[i].y - yolo_result[i].h/2) * frame->data.height, frame->data.height);
                 results->bboxes[k].actual.rb.x = app_size_limit((yolo_result[i].x + yolo_result[i].w/2) * frame->data.width, frame->data.width);
                 results->bboxes[k].actual.rb.y  = app_size_limit((yolo_result[i].y + yolo_result[i].h/2) * frame->data.height, frame->data.height);
+                results->bboxes[k].classId = yolo_result[i].classIdx;
+                results->bboxes[k].conf = yolo_result[i].prob;
+                convert_coordinates(&(results->bboxes[k]),yolo_result[i].batchIdx);
                 k++;
             }
             else {
@@ -456,10 +590,12 @@ DH_Int32 app_ai_process(DHOP_AI_NNX_Handle hNNX, DHOP_YUV_FrameData2 * frame, se
 
 err1:
     /// 摧毁DHOP_AI_IMG_Handle句柄
-    ret = DHOP_AI_IMG_destroy(hImg);
-    if (DHOP_SUCCESS != ret)
-    {
-        DHOP_LOG_ERROR("DHOP_AI_IMG_destroy fail\n");
+    for(x=0;x<18;x++){
+        ret = DHOP_AI_IMG_destroy(hImg[x]);
+        if (DHOP_SUCCESS != ret)
+        {
+            DHOP_LOG_ERROR("DHOP_AI_IMG_destroy fail\n");
+        }
     }
 
 err0:
@@ -612,7 +748,6 @@ DH_Void app_exit_callback()
     app_ptz_deinit();
 
     DHOP_SYS_deInit();
-
     
 }
 

@@ -38,6 +38,8 @@
 
 #define APP_MAX_AI_RESULT_NUM   (64)
 #define POSITION_NUMBER 251
+#define SUB_FRAME_NUM 18
+#define MAX_OUTPUT_NUM 15
 
 typedef struct{
     DH_Int32 position;

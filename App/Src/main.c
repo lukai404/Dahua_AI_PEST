@@ -47,43 +47,50 @@ DH_Int32 compute_position(double h){
     int count = 0;
     int NumberofCircle = 33,NumberofPerCircle = 17;
     int ret = -1;                        
-    float gap = 5625;
+    float gap = 562.5;
     DH_Int32 Temp_P,Temp_T,Start_P;
     DH_Uint32 Temp_Z;
-    DHOP_PTZ_Status home_position;
+	DHOP_PTZ_Status home_position = {0,};
+	DHOP_PTZ_Space space = {0,};
+	home_position.postion = &space;
 
     ret = getPTZStatus(&home_position); 
     if(DHOP_SUCCESS!=ret){
         DHOP_LOG_ERROR("getPTZStatus fail with %#x\n",ret);
         return ret;
     }
-    Start_P = home_position.postion->nPositionX - 9000;
-    if(Start_P < 0) Start_P = 36000 + Start_P;
+    DHOP_LOG_INFO("HOME status,P:%d,T:%d\n",home_position.postion->nPositionX,home_position.postion->nPositionY);
+    Start_P = home_position.postion->nPositionX + 9000;    //P值顺时针减少，与文档中不一致
+    DHOP_LOG_INFO("Start_P: %d\n",Start_P);
+    if(Start_P > 36000) Start_P = Start_P - 36000;
 
     for(int N=0;N<NumberofCircle;N++){
-        Temp_P = Start_P + N*gap;
-        if(Temp_P > 36000) Temp_P = Temp_P - 36000;
+        Temp_P = Start_P - N*gap;
+        if(Temp_P < 0) Temp_P = 36000 + Temp_P;
         for(int col = NumberofPerCircle - Listnum_b5[N];col < NumberofPerCircle;col++){
             g_app_global.positions_infos[count].nPositionX = Temp_P;
             if(col==0){
-                Temp_T = 90000;
+                Temp_T = 9000;
             }
             else{
                 double distance = (double)col * 0.185;  //0.185为B5纸张高度
                 double act = atan(h/distance);
-                Temp_T = (DH_Int32)((180 /3.14159f)*act*100);
+                Temp_T = (DH_Int32)((180 /3.14159f)*act*100);     //T值向下为正角度
             }
             g_app_global.positions_infos[count].nPositionY = Temp_T;
             g_app_global.positions_infos[count].nZoom = 1000;
             count++;
+            DHOP_LOG_INFO("current position: P:%d, T:%d\n",Temp_P,Temp_T);
         }
     }
-    return 1;
+    DHOP_LOG_INFO("total position num:%d\n",count);
+    return 0;
 }
 
 void cruise_action(){
     DH_Int32 ret = -1;
     DHOP_YUV_FrameData2     yuvFrame;
+    send_infos results;
     //goto HOME
     ret = moveToHOME();
     if(DHOP_SUCCESS!=ret){
@@ -105,7 +112,10 @@ void cruise_action(){
         if(DHOP_SUCCESS!=ret){
             DHOP_LOG_ERROR("moveToPTZ fail with %#x\n",ret);
         }
+        DHOP_LOG_INFO("arrive pos: %d\n",pos);
+        DHOP_LOG_INFO("current position: P:%d\n",g_app_global.positions_infos[pos].nPositionX);
         sleep(3);
+        
         memset(&yuvFrame, 0, sizeof(yuvFrame));
 
         // 获取YUV通道数据
@@ -114,10 +124,7 @@ void cruise_action(){
             DHOP_LOG_ERROR("DHOP_YUV_getFrame2 fail with %#x\n",ret);
         }
 
-
-
-
-        send_infos results;
+        memset(&results,0,sizeof(results));
         results.position = pos;
         ret = app_ai_process(g_app_global.hNNX,&yuvFrame,&results);
 
@@ -128,7 +135,20 @@ void cruise_action(){
         if(DHOP_SUCCESS != ret) {
             DHOP_LOG_ERROR("Release YUV frame data fail with %#x\n", ret);
         }
+
     }
+err0:
+    memset(&results,0,sizeof(results));
+    results.stop = 1;
+    ret = send(g_app_global.hNet,&results,sizeof(results),0);
+    g_app_config.cruise_start = 0;
+    if (ret < 0) {
+        perror("send head failed:");
+        app_net_reinit();
+        DHOP_LOG_ERROR("app_net_reinit fail\n");
+        return;
+    }  
+    return;
 }
 
 
@@ -136,7 +156,6 @@ void Inference_benchmark(){
     char jpg_name[30];
     DHOP_AI_IMG_Handle image;
     DH_Int32 ret = -1;
-    int MAX_OUTPUT_NUM = 15;
     send_infos results;
     for(int step = 0; step < 30 ; step++){
         if(!g_app_config.cruise_start){
@@ -250,7 +269,7 @@ DH_Int32 app_ai_task()
 {
     while(1){
         if(g_app_config.cruise_start){
-            Inference_benchmark();            
+            cruise_action();            
         }
         sleep(1);
     }

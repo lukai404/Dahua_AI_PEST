@@ -10,10 +10,10 @@ all:clean
 	mkdir -p $(APPROOT)/model
 	@cp ./App/model/pest_yolov5_3516cv500_nnie.nnx $(APPROOT)/model
 
-	mkdir -p $(APPROOT)/model/test
-	for i in {0..29}; do \
-        cp /home/lukai/selected_test_data/images/test/test_$$i.jpg $(APPROOT)/model/test; \
-	done
+	#mkdir -p $(APPROOT)/model/test
+	#for i in {0..29}; do \
+    #    cp /home/lukai/selected_test_data/images/test/test_$$i.jpg $(APPROOT)/model/test; \
+	#done
 	
 	mkdir -p $(APPROOT)/lib
 	@cp $(PWD)/../Libs/*.so $(APPROOT)/lib
