@@ -482,7 +482,7 @@ DH_Int32 app_ai_process(DHOP_AI_NNX_Handle hNNX, DHOP_YUV_FrameData2 * frame, se
    // 创建DHOP_AI_IMG_Handle的句柄，需要DHOP_AI_IMG_destroy()来释放img的内存
     for(x = 0 ; x < 18 ; x++ ){
         DHOP_LOG_INFO("start get ptrs and ptrs_HW\n");
-        /*
+        
         ptrs[0]    = subFrames[x].data.virAddr.nv21.y;
         ptrs[1]    = subFrames[x].data.virAddr.nv21.vu;
         ptrs_HW[0] = subFrames[x].data.phyAddr.nv21.y;
@@ -506,29 +506,10 @@ DH_Int32 app_ai_process(DHOP_AI_NNX_Handle hNNX, DHOP_YUV_FrameData2 * frame, se
             DHOP_LOG_ERROR("creat DHOP_AI_IMG_Handle fail\n");
             goto err0;
         }
-        */
-        /*以下是验证split逻辑*/
-        results->position = x;
-        DHOP_LOG_INFO("subFrames[x].data.phyAddr.nv21.y is %#x\n",subFrames[x].data.phyAddr.nv21.y);
-        DHOP_LOG_INFO("subFrames[x].data.phyAddr.nv21.vu is %#x\n",subFrames[x].data.phyAddr.nv21.vu);
-        DHOP_LOG_INFO("frame.data.phyAddr.nv21.y is %#x\n",frame->data.phyAddr.nv21.y);
-        DHOP_LOG_INFO("frame.data.phyAddr.nv21.vu is %#x\n",frame->data.phyAddr.nv21.vu);
-        ret = app_result_snap(results,&subFrames[x]);
-        if(ret != DHOP_SUCCESS){
-            DHOP_LOG_ERROR("app_result_snap fail with %#x\n",ret);
-        }
-        DHOP_LOG_INFO("app_result_snap %d send success\n",x);
-        ret = DHOP_MEM_blockFree(pPhyAddrs[x], pVirAddrs[x]);
-        if(DHOP_SUCCESS != ret)
-        {
-            DHOP_LOG_ERROR("DHOP_MEM_blockFree fail with %#x\n", ret);
-            return ret;
-        }
-        sleep(1);
         
     }
     DHOP_LOG_INFO("DHOP_AI_IMG_create success\n");
-/*
+
     //获取输入blob名称
     ret = DHOP_AI_NNX_getInputBlobNames(g_app_global.hNNX, (DH_Byte**)&inputNames, &inputNum);
     if(ret != DHOP_SUCCESS){
@@ -613,8 +594,8 @@ DH_Int32 app_ai_process(DHOP_AI_NNX_Handle hNNX, DHOP_YUV_FrameData2 * frame, se
         }
     }
     results->pest_num = k;
-*/
-/*
+
+
 err1:
     /// 摧毁DHOP_AI_IMG_Handle句柄
     for(x=0;x<18;x++){
@@ -623,8 +604,13 @@ err1:
         {
             DHOP_LOG_ERROR("DHOP_AI_IMG_destroy fail\n");
         }
+        ret = DHOP_MEM_blockFree(pPhyAddrs[x], pVirAddrs[x]);
+        if(DHOP_SUCCESS != ret)
+        {
+            DHOP_LOG_ERROR("DHOP_MEM_blockFree fail with %#x\n", ret);
+        }
     }
-*/
+
 err0:
     return ret;
 }

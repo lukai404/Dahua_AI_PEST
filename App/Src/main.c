@@ -104,6 +104,10 @@ void cruise_action(){
     }
     */
     //for cruise
+    ret = app_net_reinit();
+    if(DHOP_SUCCESS !=ret){
+        DHOP_LOG_ERROR("app_net_reinit failed with %#x\n",ret);
+    }
     for(int pos = 0;pos < 1; pos++){
         if(g_app_config.cruise_start==0){
             break;
@@ -130,13 +134,12 @@ void cruise_action(){
         ret = app_ai_process(g_app_global.hNNX,&yuvFrame,&results);
 
         //将frame编码,并同结果一起发送给桌面端
-       // ret = app_result_snap(&results, &yuvFrame);
+        ret = app_result_snap(&results, &yuvFrame);
 
         ret = DHOP_YUV_releaseFrame2(g_app_global.hYuv, &yuvFrame);
         if(DHOP_SUCCESS != ret) {
             DHOP_LOG_ERROR("Release YUV frame data fail with %#x\n", ret);
         }
-
     }
 err0:
     memset(&results,0,sizeof(results));
