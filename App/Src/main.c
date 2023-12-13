@@ -135,11 +135,15 @@ void Inference_benchmark(){
     DH_Int32 ret = -1;
     int MAX_OUTPUT_NUM = 15;
     send_infos results;
-    for(int step = 0; step < 400 ; step++){
+    ret = app_net_reinit();
+    if(DHOP_SUCCESS !=ret){
+        DHOP_LOG_ERROR("app net reinit failed with %#x\n",ret);
+    }
+    for(int step = 0; step < 18 ; step++){
         if(!g_app_config.cruise_start){
             goto err0;
         }
-        sprintf(jpg_name,"./model/test/test_%d.jpg",step);
+        sprintf(jpg_name,"./model/test/202312111705_Preset%d.jpg",step);
         // creat DHOP_AI_IMG_Handle. need use DHOP_AI_IMG_destroy() to release img mem
         DHOP_AI_IMG_Handle hImg;
         ret = DHOP_AI_IMGUTILS_createFromFile(&hImg, jpg_name , DHOP_AI_IMG_CS_YUV420SP_VU);
