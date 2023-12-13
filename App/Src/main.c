@@ -59,7 +59,7 @@ DH_Int32 compute_position(double h){
         DHOP_LOG_ERROR("getPTZStatus fail with %#x\n",ret);
         return ret;
     }
-    DHOP_LOG_INFO("HOME status,P:%d,T:%d\n",home_position.postion->nPositionX,home_position.postion->nPositionY);
+    //DHOP_LOG_INFO("HOME status,P:%d,T:%d\n",home_position.postion->nPositionX,home_position.postion->nPositionY);
     Start_P = home_position.postion->nPositionX + 9000;    //P值顺时针减少，与文档中不一致
     DHOP_LOG_INFO("Start_P: %d\n",Start_P);
     if(Start_P > 36000) Start_P = Start_P - 36000;
@@ -80,7 +80,7 @@ DH_Int32 compute_position(double h){
             g_app_global.positions_infos[count].nPositionY = Temp_T;
             g_app_global.positions_infos[count].nZoom = 1000;
             count++;
-            DHOP_LOG_INFO("current position: P:%d, T:%d\n",Temp_P,Temp_T);
+            //DHOP_LOG_INFO("current position: P:%d, T:%d\n",Temp_P,Temp_T);
         }
     }
     DHOP_LOG_INFO("total position num:%d\n",count);
@@ -92,6 +92,7 @@ void cruise_action(){
     DHOP_YUV_FrameData2     yuvFrame;
     send_infos results;
     //goto HOME
+    /*
     ret = moveToHOME();
     if(DHOP_SUCCESS!=ret){
         DHOP_LOG_ERROR("moveToHOME failed with %#x\n",ret);
@@ -101,20 +102,20 @@ void cruise_action(){
     if(DHOP_SUCCESS!=ret){
         DHOP_LOG_ERROR("compute_position failed with %#x\n",ret);
     }
-    
+    */
     //for cruise
-    for(int pos = 0;pos < POSITION_NUMBER; pos++){
+    for(int pos = 0;pos < 1; pos++){
         if(g_app_config.cruise_start==0){
             break;
         }
-        //go to PTZ
-        ret = moveToPTZ(&(g_app_global.positions_infos[pos]));
-        if(DHOP_SUCCESS!=ret){
-            DHOP_LOG_ERROR("moveToPTZ fail with %#x\n",ret);
-        }
+       //go to PTZ
+       // ret = moveToPTZ(&(g_app_global.positions_infos[pos]));
+       // if(DHOP_SUCCESS!=ret){
+       //     DHOP_LOG_ERROR("moveToPTZ fail with %#x\n",ret);
+       // }
         DHOP_LOG_INFO("arrive pos: %d\n",pos);
         DHOP_LOG_INFO("current position: P:%d\n",g_app_global.positions_infos[pos].nPositionX);
-        sleep(3);
+        sleep(5);
         
         memset(&yuvFrame, 0, sizeof(yuvFrame));
 
@@ -129,7 +130,7 @@ void cruise_action(){
         ret = app_ai_process(g_app_global.hNNX,&yuvFrame,&results);
 
         //将frame编码,并同结果一起发送给桌面端
-        ret = app_result_snap(&results, &yuvFrame);
+       // ret = app_result_snap(&results, &yuvFrame);
 
         ret = DHOP_YUV_releaseFrame2(g_app_global.hYuv, &yuvFrame);
         if(DHOP_SUCCESS != ret) {
