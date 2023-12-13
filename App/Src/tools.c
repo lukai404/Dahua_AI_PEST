@@ -507,6 +507,7 @@ DH_Int32 app_ai_process(DHOP_AI_NNX_Handle hNNX, DHOP_YUV_FrameData2 * frame, se
             goto err0;
         }
         
+        
     }
     DHOP_LOG_INFO("DHOP_AI_IMG_create success\n");
 
