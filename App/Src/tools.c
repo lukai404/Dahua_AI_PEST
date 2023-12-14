@@ -578,10 +578,27 @@ DH_Int32 app_ai_process(DHOP_AI_NNX_Handle hNNX, DHOP_YUV_FrameData2 * frame, se
         {
             if (k < APP_MAX_AI_RESULT_NUM) {
                 // 算法输出的是0~1的浮点数据，要转换成YUV frame的宽高坐标
-                results->bboxes[k].actual.lt.x = app_size_limit((yolo_result[i].x - yolo_result[i].w/2) * 512, 512);
-                results->bboxes[k].actual.lt.y = app_size_limit((yolo_result[i].y - yolo_result[i].h/2) * 512, 512);
-                results->bboxes[k].actual.rb.x = app_size_limit((yolo_result[i].x + yolo_result[i].w/2) * 512, 512);
-                results->bboxes[k].actual.rb.y  = app_size_limit((yolo_result[i].y + yolo_result[i].h/2) * 512, 512);
+                int ltx = app_size_limit((yolo_result[i].x - yolo_result[i].w/2) * 512, 512);
+                int lty = app_size_limit((yolo_result[i].y - yolo_result[i].h/2) * 512, 512);
+                int rbx = app_size_limit((yolo_result[i].x + yolo_result[i].w/2) * 512, 512);
+                int rby = app_size_limit((yolo_result[i].y + yolo_result[i].h/2) * 512, 512);
+                int width = rbx - ltx;
+                int height = rby - lty;
+                DHOP_LOG_INFO("yolo_result[i].x :%f\n",yolo_result[i].x);
+                DHOP_LOG_INFO("yolo_result[i].y :%f\n",yolo_result[i].y);
+                DHOP_LOG_INFO("yolo_result[i].w :%f\n",yolo_result[i].w);
+                DHOP_LOG_INFO("yolo_result[i].h :%f\n",yolo_result[i].h);
+                DHOP_LOG_INFO("ltx :%d\n",ltx);
+                DHOP_LOG_INFO("rby :%d\n",rby);
+                DHOP_LOG_INFO("pest width: %d ,pest height: %d\n",width,height);
+                if(width > 85 || height >85 || ltx < 0 || lty < 0 || rbx > 512 || rby >512){
+                    DHOP_LOG_INFO("pass\n");
+                    continue;
+                }
+                results->bboxes[k].actual.lt.x = ltx;
+                results->bboxes[k].actual.lt.y = lty;
+                results->bboxes[k].actual.rb.x = rbx;
+                results->bboxes[k].actual.rb.y  = rby;
                 results->bboxes[k].classId = yolo_result[i].classIdx;
                 results->bboxes[k].conf = yolo_result[i].prob;
                 convert_coordinates(&(results->bboxes[k]),yolo_result[i].batchIdx);
