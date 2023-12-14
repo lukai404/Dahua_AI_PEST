@@ -143,7 +143,7 @@ void Inference_benchmark(){
         if(!g_app_config.cruise_start){
             goto err0;
         }
-        sprintf(jpg_name,"./model/test/202312111705_Preset%d.jpg",step);
+        sprintf(jpg_name,"./model/test/test_%d.jpg",step);
         // creat DHOP_AI_IMG_Handle. need use DHOP_AI_IMG_destroy() to release img mem
         DHOP_AI_IMG_Handle hImg;
         ret = DHOP_AI_IMGUTILS_createFromFile(&hImg, jpg_name , DHOP_AI_IMG_CS_YUV420SP_VU);
