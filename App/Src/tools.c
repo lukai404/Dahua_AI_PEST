@@ -481,12 +481,11 @@ DH_Int32 app_ai_process(DHOP_AI_NNX_Handle hNNX, DHOP_YUV_FrameData2 * frame, se
 
    // 创建DHOP_AI_IMG_Handle的句柄，需要DHOP_AI_IMG_destroy()来释放img的内存
     for(x = 0 ; x < 18 ; x++ ){
-        DHOP_LOG_INFO("start get ptrs and ptrs_HW\n");
         
         ptrs[0]    = subFrames[x].data.virAddr.nv21.y;
         ptrs[1]    = subFrames[x].data.virAddr.nv21.vu;
         ptrs_HW[0] = subFrames[x].data.phyAddr.nv21.y;
-        ptrs_HW[0] = subFrames[x].data.phyAddr.nv21.vu;
+        ptrs_HW[1] = subFrames[x].data.phyAddr.nv21.vu;
         strides[0] = subFrames[x].data.stride[0];
         strides[1] = subFrames[x].data.width;
         //DHOP_LOG_INFO("strides[0]: %d,strides[1]: %d\n",strides[0],strides[1]);
