@@ -11,7 +11,7 @@ all:clean
 	@cp ./App/model/pest_yolov5_3516cv500_nnie.nnx $(APPROOT)/model
 
 	mkdir -p $(APPROOT)/model/test
-	@cp /home/lukai/images_split/*.jpg $(APPROOT)/model/test
+	@cp /home/lukai/selected_data/images/test/*.jpg $(APPROOT)/model/test
 
 	mkdir -p $(APPROOT)/lib
 	@cp $(PWD)/../Libs/*.so $(APPROOT)/lib
