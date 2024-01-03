@@ -1,5 +1,5 @@
 #include "tools.h"
-
+#include <sys/time.h>
 
 #define ALIGN(value, align)   ((( (value) + ( (align) - 1 ) ) \
             / (align) ) * (align) )
@@ -139,7 +139,9 @@ void Inference_benchmark(){
     if(DHOP_SUCCESS !=ret){
         DHOP_LOG_ERROR("app net reinit failed with %#x\n",ret);
     }
-    for(int step = 0; step < 800 ; step++){
+
+    
+    for(int step = 0; step < 20 ; step++){
         if(!g_app_config.cruise_start){
             goto err0;
         }
@@ -165,12 +167,16 @@ void Inference_benchmark(){
             DHOP_LOG_ERROR("DHOP_AI_NNX_setInputImg fail with %#x\n",ret);
         }
 
+        struct timeval starttime,end;
+        gettimeofday(&starttime,NULL);
         // run engine
         ret = DHOP_AI_NNX_run(g_app_global.hNNX);
         if(ret != DHOP_SUCCESS){
             DHOP_LOG_ERROR("DHOP_AI_NNX_run fail with %#x\n",ret);
         }
-
+        gettimeofday(&end,NULL);
+        float timeuse = (end.tv_usec-starttime.tv_usec) / 1000;
+        DHOP_LOG_INFO("timeuse %f ms\n",timeuse);
         //get output blob name
         DH_String outputNames[MAX_OUTPUT_NUM];
         DH_Uint32 outputNum = MAX_OUTPUT_NUM;

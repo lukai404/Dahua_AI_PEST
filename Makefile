@@ -4,6 +4,9 @@ CFLAGS += -I$(PWD)/../Include/DhopSdk/Event
 CFLAGS += -I App/Src/$(plat)
 CFLAGS += -litop_ai
 
+IMAGE_PATH := /home/lukai/selected_data/images/test
+DEST_PATH := $(APPROOT)/model/test
+
 all:clean
 	$(CROSS)g++ $(wildcard App/Src/*.c) $(wildcard App/Src/$(plat)/*.c)  $(CFLAGS) -o $(TARGET)
 
@@ -11,7 +14,10 @@ all:clean
 	@cp ./App/model/pest_yolov5_3516cv500_nnie.nnx $(APPROOT)/model
 
 	mkdir -p $(APPROOT)/model/test
-	@cp /home/lukai/selected_data/images/test/*.jpg $(APPROOT)/model/test
+	
+	@for i in $$(seq 0 19); do \
+		cp $(IMAGE_PATH)/test_$$i.jpg $(DEST_PATH); \
+	done
 
 	mkdir -p $(APPROOT)/lib
 	@cp $(PWD)/../Libs/*.so $(APPROOT)/lib
