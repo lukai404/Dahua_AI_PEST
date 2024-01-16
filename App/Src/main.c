@@ -103,12 +103,12 @@ void cruise_action(){
         DHOP_LOG_ERROR("compute_position failed with %#x\n",ret);
     }
     */
-    //for cruise
+    //start cruise
     ret = app_net_reinit();
     if(DHOP_SUCCESS !=ret){
         DHOP_LOG_ERROR("app_net_reinit failed with %#x\n",ret);
     }
-    for(int pos = 0;pos < 1; pos++){
+    for(int pos = 0;pos < 251; pos++){
         if(g_app_config.cruise_start==0){
             break;
         }
@@ -187,8 +187,17 @@ void Inference_benchmark(){
             DHOP_LOG_ERROR("DHOP_AI_NNX_setInputImg fail with %#x\n",ret);
         }
 
+        struct timeval start_time, end;
+        double time_used_ms;
+
+        
         // run engine
+        gettimeofday(&start_time, NULL);
         ret = DHOP_AI_NNX_run(g_app_global.hNNX);
+        gettimeofday(&end, NULL);
+        time_used_ms = (end.tv_sec - start_time.tv_sec) * 1000.0; // 秒转毫秒
+        time_used_ms += (end.tv_usec - start_time.tv_usec) / 1000.0; // 微秒转毫秒
+        DHOP_LOG_INFO("inference cost: %lf ms",time_used_ms);
         if(ret != DHOP_SUCCESS){
             DHOP_LOG_ERROR("DHOP_AI_NNX_run fail with %#x\n",ret);
         }

@@ -525,7 +525,14 @@ DH_Int32 app_ai_process(DHOP_AI_NNX_Handle hNNX, DHOP_YUV_FrameData2 * frame, se
 
     DHOP_LOG_INFO("DHOP_AI_NNX_setInputImg success\n");
     // AI运行
+    struct timeval start_time, end_time;
+    double time_used_ms;
+    gettimeofday(&start_time, NULL);
     ret = DHOP_AI_NNX_run(g_app_global.hNNX);
+    gettimeofday(&end_time, NULL);
+    time_used_ms = (end_time.tv_sec - start_time.tv_sec) * 1000.0 + (end_time.tv_usec - start_time.tv_usec) / 1000.0;
+    DHOP_LOG_INFO("dhop ai run time: %f ms\n", time_used_ms);
+    
     if (DHOP_SUCCESS != ret)
     {
         DHOP_LOG_ERROR("dhop ai run fail");

@@ -31,6 +31,7 @@
 #include "yolo_object.h"
 #include <dlfcn.h>
 #include <math.h>
+#include <time.h>
 
 #define ALIGN(value, align)   ((( (value) + ( (align) - 1 ) ) \
             / (align) ) * (align) )
