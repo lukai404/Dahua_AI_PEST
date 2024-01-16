@@ -15,7 +15,7 @@ all:clean
 
 	mkdir -p $(APPROOT)/model/test
 	
-	@for i in $$(seq 0 19); do \
+	@for i in $$(seq 0 799); do \
 		cp $(IMAGE_PATH)/test_$$i.jpg $(DEST_PATH); \
 	done
 

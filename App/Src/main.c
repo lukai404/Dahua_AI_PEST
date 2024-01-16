@@ -140,8 +140,7 @@ void Inference_benchmark(){
         DHOP_LOG_ERROR("app net reinit failed with %#x\n",ret);
     }
 
-    
-    for(int step = 0; step < 20 ; step++){
+    for(int step = 0; step < 800 ; step++){
         if(!g_app_config.cruise_start){
             goto err0;
         }
