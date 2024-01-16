@@ -481,7 +481,6 @@ DH_Int32 app_ai_process(DHOP_AI_NNX_Handle hNNX, DHOP_YUV_FrameData2 * frame, se
 
    // 创建DHOP_AI_IMG_Handle的句柄，需要DHOP_AI_IMG_destroy()来释放img的内存
     for(x = 0 ; x < 18 ; x++ ){
-        
         ptrs[0]    = subFrames[x].data.virAddr.nv21.y;
         ptrs[1]    = subFrames[x].data.virAddr.nv21.vu;
         ptrs_HW[0] = subFrames[x].data.phyAddr.nv21.y;
@@ -505,7 +504,6 @@ DH_Int32 app_ai_process(DHOP_AI_NNX_Handle hNNX, DHOP_YUV_FrameData2 * frame, se
             DHOP_LOG_ERROR("creat DHOP_AI_IMG_Handle fail\n");
             goto err0;
         }
-        
         
     }
     DHOP_LOG_INFO("DHOP_AI_IMG_create success\n");
