@@ -92,7 +92,7 @@ void cruise_action(){
     DHOP_YUV_FrameData2     yuvFrame;
     send_infos results;
     //goto HOME
-    /*
+    
     ret = moveToHOME();
     if(DHOP_SUCCESS!=ret){
         DHOP_LOG_ERROR("moveToHOME failed with %#x\n",ret);
@@ -102,7 +102,7 @@ void cruise_action(){
     if(DHOP_SUCCESS!=ret){
         DHOP_LOG_ERROR("compute_position failed with %#x\n",ret);
     }
-    */
+
     //start cruise
     ret = app_net_reinit();
     if(DHOP_SUCCESS !=ret){
@@ -113,14 +113,13 @@ void cruise_action(){
             break;
         }
        //go to PTZ
-       // ret = moveToPTZ(&(g_app_global.positions_infos[pos]));
-       // if(DHOP_SUCCESS!=ret){
-       //     DHOP_LOG_ERROR("moveToPTZ fail with %#x\n",ret);
-       // }
+        ret = moveToPTZ(&(g_app_global.positions_infos[pos]));
+        if(DHOP_SUCCESS!=ret){
+            DHOP_LOG_ERROR("moveToPTZ fail with %#x\n",ret);
+        }
         DHOP_LOG_INFO("arrive pos: %d\n",pos);
         DHOP_LOG_INFO("current position: P:%d\n",g_app_global.positions_infos[pos].nPositionX);
-        sleep(5);
-        
+        sleep(4);
         memset(&yuvFrame, 0, sizeof(yuvFrame));
 
         // 获取YUV通道数据
@@ -152,6 +151,7 @@ err0:
         DHOP_LOG_ERROR("app_net_reinit fail\n");
         return;
     }  
+    moveToHOME();
     return;
 }
 

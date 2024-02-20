@@ -159,11 +159,11 @@
                     <div class="form-group">
                         <div class="col-sm-12 col-sm-offset-3">
                             <button type="button" id="start_cruise"
-                                class="btn btn-info col-sm-4">开始巡航</button>
+                                class="btn btn-info col-sm-4" style="position: absolute; top: 400px; left: -600px;">开始巡航</button>
                             <button type="button" id="stop_cruise"
-                                class="btn btn-default col-sm-offset-1 col-sm-4">停止巡航</button>
+                                class="btn btn-default col-sm-offset-1 col-sm-4" style="position: absolute; top: 400px; left: -490px;">停止巡航</button>
                             <button type="button" id="set_Home"
-                                class="btn btn-default col-sm-offset-1 col-sm-4">设置HOME点</button>
+                                class="btn btn-default col-sm-offset-1 col-sm-4" style="position: absolute; top: 400px; left: -350px;">设置HOME点</button>
                         </div>
                     </div>
                     <div id="showResult"></div>
@@ -195,6 +195,13 @@
                         </div>
                         <div class="form-group">
                             <label for="height" class="col-sm-1 control-label">球机高度</label>
+                            <div class="col-sm-4">
+                                <input type="text" class="form-control" name="height" id="height" autocomplete="on"
+                                    placeholder="">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="height" class="col-sm-1 control-label">球机Z值序列</label>
                             <div class="col-sm-4">
                                 <input type="text" class="form-control" name="height" id="height" autocomplete="on"
                                     placeholder="">
@@ -554,11 +561,12 @@
             //点击“开始巡航”按钮，开启巡航
             $("#start_cruise").click(function(){
                 var req_url = window.location.origin + "/DHOP_API/"+ getAppName()+"/startCruise"+"?t=3&session="+getSession();
-                alert(req_url);
                 if (g_timer1 != null) {
                     clearInterval(g_timer1);
                     g_timer1 = null;
                 }
+                const formSerializedData = $("#config_form").serialize();
+                alert(formSerializedData);
                 $.ajax({
                     url:req_url,
                     type:"post",
@@ -607,6 +615,7 @@
                     clearInterval(g_timer1);
                     g_timer1 = null;
                 }
+                alert()
                 $.ajax({
                     url:req_url,
                     type:"post",

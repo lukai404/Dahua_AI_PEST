@@ -297,12 +297,10 @@ DH_Int32 app_result_snap(send_infos* result, DHOP_YUV_FrameData2* frame) {
     encReq.quality      = DHOP_VENC_JPEG_QUALITY_DEFAULT;
     encReq.region.lt.x  = 0;
     encReq.region.lt.y  = 0;
-    DHOP_LOG_INFO("before encReq.region.rb.x\n");
     encReq.region.rb.x  = frame->data.width;
     encReq.region.rb.y  = frame->data.height;
     encReq.data         = frame;
     encReq.timeout      = 200;
-    DHOP_LOG_INFO("before DHOP_VENC_sendRequest\n");
     ret = DHOP_VENC_sendRequest(g_app_global.hVenc, &encReq);
     if (ret != DHOP_SUCCESS) {
         DHOP_LOG_WARN("Send enc reqeust failed with %#s\n",ret);
@@ -589,13 +587,6 @@ DH_Int32 app_ai_process(DHOP_AI_NNX_Handle hNNX, DHOP_YUV_FrameData2 * frame, se
                 int rby = app_size_limit((yolo_result[i].y + yolo_result[i].h/2) * 512, 512);
                 int width = rbx - ltx;
                 int height = rby - lty;
-                DHOP_LOG_INFO("yolo_result[i].x :%f\n",yolo_result[i].x);
-                DHOP_LOG_INFO("yolo_result[i].y :%f\n",yolo_result[i].y);
-                DHOP_LOG_INFO("yolo_result[i].w :%f\n",yolo_result[i].w);
-                DHOP_LOG_INFO("yolo_result[i].h :%f\n",yolo_result[i].h);
-                DHOP_LOG_INFO("ltx :%d\n",ltx);
-                DHOP_LOG_INFO("rby :%d\n",rby);
-                DHOP_LOG_INFO("pest width: %d ,pest height: %d\n",width,height);
                 if(width > 85 || height >85 || ltx < 0 || lty < 0 || rbx > 512 || rby >512){
                     DHOP_LOG_INFO("pass\n");
                     continue;
@@ -710,8 +701,9 @@ DH_Int32 app_http_on_request(const DHOP_HTTP_Request  *request,
         request->readContent((DH_String)request->token, buffer, (DH_Uint32*)&len);
         len += 1; // 末尾增加'\0'
 
+        DHOP_LOG_INFO("Buffer: %s\n", buffer);
         app_http_urldecode(buffer, outbuf, len);
-
+        DHOP_LOG_INFO("outbuf: %s\n", outbuf);
         app_config_parse(outbuf, &g_app_config);
 
         app_config_save(&g_app_config);
